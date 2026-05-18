@@ -1,0 +1,33 @@
+import io
+from flask import Flask, request, send_file, jsonify
+from flask_cors import CORS
+from PIL import Image
+
+app = Flask(__name__)
+CORS(app) # Required to connect Frontend and Backend smoothly
+
+@app.route('/convert', methods=['POST'])
+def convert_file():
+    try:
+        uploaded_file = request.files['file']
+        target_format = request.form['format'].upper()
+
+        # Open the uploaded image
+        img = Image.open(uploaded_file.stream)
+
+        # Convert RGBA to RGB for JPEG to handle transparent backgrounds
+        if target_format == "JPEG" and img.mode in ('RGBA', 'LA'):
+            img = img.convert('RGB')
+
+        # Save converted file temporarily in memory
+        output = io.BytesIO()
+        img.save(output, format=target_format)
+        output.seek(0)
+
+        return send_file(output, mimetype=f'image/{target_format.lower()}')
+
+    except Exception as e:
+        return str(e), 400
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
